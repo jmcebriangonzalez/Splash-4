@@ -38,6 +38,12 @@
 /*  Note: This version works under both the FORK and SPROC models        */
 /*                                                                       */
 /*************************************************************************/
+#ifdef ENABLE_PARSEC_HOOKS
+#include <hooks.h>
+#endif
+#ifdef RESET_STATS
+#include "m5op.h"
+#endif
 
 #include <stdio.h>
 #include <math.h>
@@ -52,14 +58,14 @@ MAIN_ENV
 #define min(a,b) ((a) < (b) ? (a) : (b))
 
 struct GlobalMemory {
-  double *t_in_fac;   
+  double *t_in_fac;
   double *t_in_solve;
-  double *t_in_mod; 
+  double *t_in_mod;
   double *t_in_bar;
   double *completion;
-  unsigned long starttime; 
-  unsigned long rf; 
-  unsigned long rs; 
+  unsigned long starttime;
+  unsigned long rf;
+  unsigned long rs;
   unsigned long done;
   long id;
   BARDEC(start)
@@ -118,6 +124,10 @@ int main(int argc, char *argv[])
   long edge;
   long size;
   unsigned long start;
+
+#ifdef ENABLE_PARSEC_HOOKS
+  __parsec_bench_begin (__splash2_lu_cb);
+#endif
 
   CLOCK(start)
 
@@ -206,7 +216,7 @@ int main(int argc, char *argv[])
     if (last_malloc[i] == NULL) {
       fprintf(stderr,"Could not malloc memory blocks for proc %ld\n",i);
       exit(-1);
-    } 
+    }
     last_malloc[i] = (double *) (((unsigned long) last_malloc[i]) + PAGE_SIZE -
                      ((unsigned long) last_malloc[i]) % PAGE_SIZE);
 
@@ -219,7 +229,7 @@ int main(int argc, char *argv[])
   if (a == NULL) {
     printerr("Could not malloc memory for a\n");
     exit(-1);
-  } 
+  }
   for (i=0;i<nblocks;i++) {
     for (j=0;j<nblocks;j++) {
       proc_num = BlockOwner(i,j);
@@ -239,7 +249,7 @@ int main(int argc, char *argv[])
   if (rhs == NULL) {
     printerr("Could not malloc memory for rhs\n");
     exit(-1);
-  } 
+  }
 
   Global = (struct GlobalMemory *) G_MALLOC(sizeof(struct GlobalMemory));
   Global->t_in_fac = (double *) G_MALLOC(P*sizeof(double));
@@ -284,8 +294,8 @@ int main(int argc, char *argv[])
          size = block_size*block_size;
        }
 
-       Place all addresses x such that 
-       (&(a[i+j*nblocks][0]) <= x < &(a[i+j*nblocks][size-1])) 
+       Place all addresses x such that
+       (&(a[i+j*nblocks][0]) <= x < &(a[i+j*nblocks][size-1]))
        on node proc_num
      }
    }
@@ -302,12 +312,16 @@ int main(int argc, char *argv[])
     PrintA();
   }
 
-  SPLASH3_ROI_BEGIN();
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_roi_begin();
+#endif
 
   CREATE(SlaveStart, P);
   WAIT_FOR_END(P);
 
-  SPLASH3_ROI_END();
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_roi_end();
+#endif
 
   if (doprint) {
     printf("\nMatrix after decomposition:\n");
@@ -326,12 +340,12 @@ int main(int argc, char *argv[])
       avgt += Global->completion[i];
     }
     avgt = avgt / P;
-  
+
     min_fac = max_fac = avg_fac = Global->t_in_fac[0];
     min_solve = max_solve = avg_solve = Global->t_in_solve[0];
     min_mod = max_mod = avg_mod = Global->t_in_mod[0];
     min_bar = max_bar = avg_bar = Global->t_in_bar[0];
-  
+
     for (i=1; i<P; i++) {
       if (Global->t_in_fac[i] > max_fac) {
         max_fac = Global->t_in_fac[i];
@@ -403,6 +417,10 @@ int main(int argc, char *argv[])
     CheckResult(n, a, rhs);
   }
 
+#ifdef ENABLE_PARSEC_HOOKS
+  __parsec_bench_end();
+#endif
+
   MAIN_END;
 }
 
@@ -410,6 +428,7 @@ int main(int argc, char *argv[])
 void SlaveStart()
 {
   long MyNum;
+
 /*
   LOCK(Global->idlock)
     MyNum = Global->id;
@@ -417,17 +436,27 @@ void SlaveStart()
   UNLOCK(Global->idlock)
 */
 	MyNum = FETCH_ADD(Global->id, 1)
+
+#ifdef ENABLE_PARSEC_HOOKS
+    __parsec_thread_begin();
+#endif
+
 /* POSSIBLE ENHANCEMENT:  Here is where one might pin processes to
    processors to avoid migration */
 
   OneSolve(n, block_size, MyNum, dostats);
+
+#ifdef ENABLE_PARSEC_HOOKS
+  __parsec_thread_end();
+#endif
+
 }
 
 
 void OneSolve(long n, long block_size, long MyNum, long dostats)
 {
-  unsigned long myrs; 
-  unsigned long myrf; 
+  unsigned long myrs;
+  unsigned long myrf;
   unsigned long mydone;
   struct LocalCopies *lc;
 
@@ -446,11 +475,14 @@ void OneSolve(long n, long block_size, long MyNum, long dostats)
 
   /* to remove cold-start misses, all processors touch their own data */
   TouchA(block_size, MyNum);
-  
+
   BARRIER(Global->start, P);
 
 /* POSSIBLE ENHANCEMENT:  Here is where one might reset the
    statistics that one is measuring about the parallel execution */
+#ifdef RESET_STATS
+  m5_reset_stats(0,0);
+#endif
 
   if ((MyNum == 0) || (dostats)) {
     CLOCK(myrs);
@@ -482,8 +514,8 @@ void OneSolve(long n, long block_size, long MyNum, long dostats)
 
 void lu0(double *a, long n, long stride)
 {
-  long j; 
-  long k; 
+  long j;
+  long k;
   long length;
   double alpha;
 
@@ -501,7 +533,7 @@ void lu0(double *a, long n, long stride)
 
 void bdiv(double *a, double *diag, long stride_a, long stride_diag, long dimi, long dimk)
 {
-  long j; 
+  long j;
   long k;
   double alpha;
 
@@ -516,8 +548,8 @@ void bdiv(double *a, double *diag, long stride_a, long stride_diag, long dimi, l
 
 void bmodd(double *a, double *c, long dimi, long dimj, long stride_a, long stride_c)
 {
-  long j; 
-  long k; 
+  long j;
+  long k;
   long length;
   double alpha;
 
@@ -534,13 +566,13 @@ void bmodd(double *a, double *c, long dimi, long dimj, long stride_a, long strid
 
 void bmod(double *a, double *b, double *c, long dimi, long dimj, long dimk, long stridea, long strideb, long stridec)
 {
-  long j; 
+  long j;
   long k;
   double alpha;
 
   for (k=0; k<dimk; k++) {
     for (j=0; j<dimj; j++) {
-      alpha = -b[k+j*strideb]; 
+      alpha = -b[k+j*strideb];
       daxpy(&c[j*stridec], &a[k*stridea], dimi, alpha);
     }
   }
@@ -559,7 +591,7 @@ void daxpy(double *a, double *b, long n, double alpha)
 
 long BlockOwner(long I, long J)
 {
-//	return((J%num_cols) + (I%num_rows)*num_cols); 
+//	return((J%num_cols) + (I%num_rows)*num_cols);
 	return((I + J*nblocks) % P);
 }
 
@@ -582,7 +614,7 @@ void lu(long n, long bs, long MyNum, struct LocalCopies *lc, long dostats)
   unsigned long t1, t2, t3, t4, t11, t22;
 
   for (k=0, K=0; k<n; k+=bs, K++) {
-    kl = k + bs; 
+    kl = k + bs;
     if (kl > n) {
       kl = n;
       strK = kl - k;
@@ -596,7 +628,7 @@ void lu(long n, long bs, long MyNum, struct LocalCopies *lc, long dostats)
 
     /* factor diagonal block */
     if (BlockOwner(K, K) == MyNum) {
-      A = a[K+K*nblocks]; 
+      A = a[K+K*nblocks];
       lu0(A, strK, strK);
     }
 
@@ -614,21 +646,21 @@ void lu(long n, long bs, long MyNum, struct LocalCopies *lc, long dostats)
     D = a[K+K*nblocks];
     for (i=kl, I=K+1; i<n; i+=bs, I++) {
       if (BlockOwnerColumn(I, K) == MyNum) {  /* parcel out blocks */
-	il = i + bs; 
+	il = i + bs;
 	if (il > n) {
 	  il = n;
           strI = il - i;
         } else {
           strI = bs;
         }
-	A = a[I+K*nblocks]; 
-	bdiv(A, D, strI, strK, strI, strK);  
+	A = a[I+K*nblocks];
+	bdiv(A, D, strI, strK, strI, strK);
       }
     }
     /* modify row k by diagonal block */
     for (j=kl, J=K+1; j<n; j+=bs, J++) {
       if (BlockOwnerRow(K, J) == MyNum) {  /* parcel out blocks */
-	jl = j+bs; 
+	jl = j+bs;
 	if (jl > n) {
 	  jl = n;
           strJ = jl - j;
@@ -642,7 +674,7 @@ void lu(long n, long bs, long MyNum, struct LocalCopies *lc, long dostats)
 
     if ((MyNum == 0) || (dostats)) {
       CLOCK(t22);
-    }   
+    }
 
     BARRIER(Global->start, P);
 
@@ -652,16 +684,16 @@ void lu(long n, long bs, long MyNum, struct LocalCopies *lc, long dostats)
 
     /* modify subsequent block columns */
     for (i=kl, I=K+1; i<n; i+=bs, I++) {
-      il = i+bs; 
+      il = i+bs;
       if (il > n) {
 	il = n;
         strI = il - i;
       } else {
         strI = bs;
       }
-      A = a[I+K*nblocks]; 
+      A = a[I+K*nblocks];
       for (j=kl, J=K+1; j<n; j+=bs, J++) {
-	jl = j + bs; 
+	jl = j + bs;
 	if (jl > n) {
 	  jl = n;
           strJ= jl - j;
@@ -669,7 +701,7 @@ void lu(long n, long bs, long MyNum, struct LocalCopies *lc, long dostats)
           strJ = bs;
         }
 	if (BlockOwner(I, J) == MyNum) {  /* parcel out blocks */
-	  B = a[K+J*nblocks]; 
+	  B = a[K+J*nblocks];
 	  C = a[I+J*nblocks];
 	  bmod(A, B, C, strI, strJ, strK, strI, strK, strI);
 	}
@@ -784,7 +816,7 @@ double TouchA(long bs, long MyNum)
 	}
       }
     }
-  } 
+  }
   return(tot);
 }
 
@@ -815,7 +847,7 @@ void PrintA()
       }
       ii = (i/block_size) + (j/block_size)*nblocks;
       jj = (i%ibs)+(j%jbs)*skip;
-      printf("%8.1f ", a[ii][jj]);   
+      printf("%8.1f ", a[ii][jj]);
     }
     printf("\n");
   }
@@ -832,7 +864,7 @@ void CheckResult(long n, double **a, double *rhs)
   long ibs, jbs, skip;
 
   edge = n%block_size;
-  y = (double *) malloc(n*sizeof(double));  
+  y = (double *) malloc(n*sizeof(double));
   if (y == NULL) {
     printerr("Could not malloc memory for y\n");
     exit(-1);
@@ -912,4 +944,3 @@ void printerr(char *s)
 {
   fprintf(stderr,"ERROR: %s\n",s);
 }
-

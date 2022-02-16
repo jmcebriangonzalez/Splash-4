@@ -1,14 +1,10 @@
 CC := gcc
-
-mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
-current_dir := $(dir $(mkfile_path))
-
-CFLAGS := -O2 -pthread -D_XOPEN_SOURCE=500 -D_POSIX_C_SOURCE=200112 -std=c11 -g -fno-strict-aliasing -I$(current_dir)/hooks_m5 -I$(current_dir)/hooks_m5/include -DENABLE_PARSEC_HOOKS -DRESET_STATS
-LDFLAGS := -L$(current_dir)/hooks_m5/.libs -lm -lhooks
+CFLAGS := -O2 -pthread -D_XOPEN_SOURCE=500 -D_POSIX_C_SOURCE=200112 -std=c11 -g -fno-strict-aliasing
+LDFLAGS := -lm
 
 BASEDIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 MACROS := $(BASEDIR)/pthread.m4
-M4 := m4
+M4 := m4 
 M4FLAGS := -Ulen -Uindex -P
 
 M4FLAGS += -D ATOMIC_BARRIERS
@@ -19,10 +15,11 @@ $(error Please define the BASEDIR variable)
 endif
 
 x = *
-
+	
 $(TARGET): $(OBJS) $(EXTRADEPS)
-	$(CC) $(current_dir)/hooks_m5/m5op_x86.o $(CFLAGS) -o $(TARGET) $(OBJS) $(LDFLAGS)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LDFLAGS)
 
+	
 bindCores: M4FLAGS += -D BIND_CORES
 bindCores: CFLAGS += -D BIND_CORES
 bindCores: CFLAGS += -D_GNU_SOURCE
@@ -34,16 +31,16 @@ bindThreads: CFLAGS += -D BIND_THREADS
 bindThreads: CFLAGS += -D_GNU_SOURCE
 bindThreads: TARGET := $(TARGET)-bindedThreads
 bindThreads: $(TARGET)
-
+	
 debug: $(OBJS) $(EXTRADEPS)
 	$(CC) $(CFLAGS) -g -o $(TARGET) $(OBJS) $(LDFLAGS)
-
+	
 clean:
 	rm -rf *.c *.h *.o $(TARGET)*
 
 semiclean:
 	rm -rf *.c *.h *.o
-
+	
 %.h: %.h.in
 	$(M4) $(M4FLAGS) $(MACROS) $< > $@
 
@@ -51,4 +48,5 @@ semiclean:
 	$(M4) $(M4FLAGS) $(MACROS) $< > $@
 
 %.o: %.c $(EXTRADEPS)
-	$(CC) -c $(CFLAGS) $<
+	$(CC) -c $(CFLAGS) $<	
+

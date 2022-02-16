@@ -20,6 +20,13 @@
 
 EXTERN_ENV
 
+#ifdef ENABLE_PARSEC_HOOKS
+#include <hooks.h>
+#endif
+#ifdef RESET_STATS
+#include "m5op.h"
+#endif
+
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
@@ -73,16 +80,19 @@ void slave()
    double *t1c;
    double *t1d;
 
+#ifdef ENABLE_PARSEC_HOOKS
+   __parsec_thread_begin();
+#endif
+
    ressqr = lev_res[numlev-1] * lev_res[numlev-1];
 /*
    LOCK(locks->idlock)
      procid = global->id;
      global->id = global->id+1;
-   UNLOCK(locks->idlock) 
+   UNLOCK(locks->idlock)
 */
+   procid = FETCH_ADD(global->id, 1)
 
-	procid = FETCH_ADD(global->id, 1)
-	
    BARRIER(bars->sl_prini,nprocs)
 
 /* POSSIBLE ENHANCEMENT:  Here is where one might pin processes to
@@ -395,7 +405,7 @@ eof(double) +
        t2a[i][jm-1] = t2b[i][jm-1];
      }
    }
-   
+
    BARRIER(bars->sl_prini,nprocs)
 
    t2a = (double **) psib[procid];
@@ -512,7 +522,7 @@ eof(double) +
    UNLOCK(locks->psibilock)
 */
    FETCH_ADD_DOUBLE(&global->psibi, psibipriv);
-   
+
 /* initialize psim matrices
 
    if there is more than one process, then split the processes
@@ -692,6 +702,10 @@ eof(double) +
 	 }
 /* POSSIBLE ENHANCEMENT:  Here is where one might reset the
    statistics that one is measuring about the parallel execution */
+#ifdef RESET_STATS
+	 BARRIER(bars->sl_onetime,nprocs);
+	 m5_reset_stats(0,0);
+#endif
        }
 
        slave2(procid,firstrow,lastrow,numrows,firstcol,lastcol,numcols);
@@ -819,5 +833,9 @@ eof(double) +
     CLOCK(t1);
     gp[procid].total_time = t1-gp[procid].total_time;
   }
-}
 
+#ifdef ENABLE_PARSEC_HOOKS
+  __parsec_thread_end();
+#endif
+
+}

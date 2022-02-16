@@ -30,6 +30,12 @@
 /*  Note: This version works under both the FORK and SPROC models        */
 /*                                                                       */
 /*************************************************************************/
+#ifdef ENABLE_PARSEC_HOOKS
+#include <hooks.h>
+#endif
+#ifdef RESET_STATS
+#include "m5op.h"
+#endif
 
 MAIN_ENV
 
@@ -96,15 +102,19 @@ int main(int argc, char *argv[])
   unsigned long start;
   double mint, maxt, avgt;
 
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_bench_begin (__splash2_cholesky);
+#endif
+
   CLOCK(start)
 
   while ((c = getopt(argc, argv, "B:C:p:D:sth")) != -1) {
     switch(c) {
-    case 'B': postpass_partition_size = atoi(optarg); break;  
-    case 'C': CacheSize = (double) atoi(optarg); break;  
-    case 'p': P = atol(optarg); break;  
-    case 's': do_stats = 1; break;  
-    case 't': do_test = 1; break;  
+    case 'B': postpass_partition_size = atoi(optarg); break;
+    case 'C': CacheSize = (double) atoi(optarg); break;
+    case 'p': P = atol(optarg); break;
+    case 's': do_stats = 1; break;
+    case 't': do_test = 1; break;
     case 'h': printf("Usage: CHOLESKY <options> file\n\n");
               printf("options:\n");
               printf("  -Bb : Use a postpass partition size of b.\n");
@@ -130,12 +140,13 @@ int main(int argc, char *argv[])
   gp->pid = 0;
   Global = (struct GlobalMemory *)
     G_MALLOC(sizeof(struct GlobalMemory), 0);
-    
+
   BARINIT(Global->start, P)
 
   LOCKINIT(Global->waitLock)
   LOCKINIT(Global->memLock)
-  MallocInit(P);  
+
+  MallocInit(P);
 
   i = 0;
   while (++i < argc && argv[i][0] == '-')
@@ -158,7 +169,7 @@ int main(int argc, char *argv[])
   printf("Fan-out, ");
   printf("no block copy-across\n");
 
-  printf("LB domain, "); 
+  printf("LB domain, ");
   printf("embedded ");
   printf("distribution\n");
 
@@ -216,7 +227,7 @@ int main(int argc, char *argv[])
     if (domain[i])
       num_domain += nz[i];
   }
-  
+
   ComputeTargetBlockSize(M, P);
 
   printf("Target partition size %ld, postpass size %ld\n",
@@ -253,12 +264,16 @@ int main(int argc, char *argv[])
   ComputeRemainingFO();
   ComputeReceivedFO();
 
-  SPLASH3_ROI_BEGIN();
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_roi_begin();
+#endif
 
   CREATE(Go, P);
   WAIT_FOR_END(P);
 
-  SPLASH3_ROI_END();
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_roi_end();
+#endif
 
   printf("%.0f operations for factorization\n", work_tree[M.n]);
 
@@ -312,6 +327,10 @@ int main(int argc, char *argv[])
     }
   }
 
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_bench_end();
+#endif
+
   MAIN_END
 }
 
@@ -320,14 +339,19 @@ void Go()
 {
   long MyNum;
   struct LocalCopies *lc;
+
 /*
   LOCK(Global->waitLock)
     MyNum = gp->pid;
     gp->pid++;
   UNLOCK(Global->waitLock)
 */
-
   MyNum = FETCH_ADD(gp->pid, 1)
+
+#ifdef ENABLE_PARSEC_HOOKS
+    __parsec_thread_begin();
+#endif
+
 /* POSSIBLE ENHANCEMENT:  Here is where one might pin processes to
    processors to avoid migration */
 
@@ -347,12 +371,16 @@ void Go()
 
 /* POSSIBLE ENHANCEMENT:  Here is where one might reset the
    statistics that one is measuring about the parallel execution */
+#ifdef RESET_STATS
+  m5_reset_stats(0,0);
+#endif
 
   if ((MyNum == 0) || (do_stats)) {
     CLOCK(lc->rs);
   }
 
   BNumericSolveFO(MyNum,lc);
+
   BARRIER(Global->start, P);
 
   if ((MyNum == 0) || (do_stats)) {
@@ -364,6 +392,7 @@ void Go()
     CheckRemaining();
     CheckReceived();
   }
+
   BARRIER(Global->start, P);
 
   if ((MyNum == 0) || (do_stats)) {
@@ -372,8 +401,13 @@ void Go()
   if (MyNum == 0) {
     gp->initdone = lc->rs;
     gp->finish = lc->rf;
-  } 
+  }
+
   BARRIER(Global->start, P);
+
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_thread_end();
+#endif
 
 }
 
@@ -423,4 +457,3 @@ void ComposePerm(long *PERM1, long *PERM2, long n)
 
   free(PERM3);
 }
-

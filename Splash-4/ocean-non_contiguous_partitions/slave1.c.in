@@ -18,11 +18,17 @@
       subroutine slave
       ****************  */
 
+#ifdef ENABLE_PARSEC_HOOKS
+#include <hooks.h>
+#endif
+#ifdef RESET_STATS
+#include "m5op.h"
+#endif
+
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
 #include <stdlib.h>
-
 #include "decs.h"
 
 void slave()
@@ -65,6 +71,10 @@ void slave()
    long procid;
    unsigned long t1;
 
+#ifdef ENABLE_PARSEC_HOOKS
+    __parsec_thread_begin();
+#endif
+
    ressqr = lev_res[numlev-1] * lev_res[numlev-1];
 /*
    LOCK(locks->idlock)
@@ -74,9 +84,10 @@ void slave()
 */
 
 	procid = FETCH_ADD(global->id, 1)
-	
+
 /* POSSIBLE ENHANCEMENT:  Here is where one might pin processes to
    processors to avoid migration. */
+
 
 /* POSSIBLE ENHANCEMENT:  Here is where one might distribute
    data structures across physically distributed memories in
@@ -285,7 +296,7 @@ BARRIER(bars->sl_prini,nprocs)
      }
    }
    BARRIER(bars->sl_prini,nprocs)
-   
+
    multig(procid);
 
    for(i=istart;i<=iend;i++) {
@@ -348,7 +359,7 @@ BARRIER(bars->sl_prini,nprocs)
    UNLOCK(locks->psibilock)
    */
    FETCH_ADD_DOUBLE(&global->psibi, psibipriv);
-  
+
    for(psiindex=0;psiindex<=1;psiindex++) {
      if (procid == MASTER) {
        fields->psim[psiindex][0][0] = 0.0;
@@ -488,10 +499,10 @@ BARRIER(bars->sl_prini,nprocs)
        frcng->tauz[i][iindex] = curlt;
      }
    }
-   
+
    BARRIER(bars->sl_onetime,nprocs)
-   
-   
+
+
 /***************************************************************
  one-time stuff over at this point
  ***************************************************************/
@@ -511,6 +522,11 @@ BARRIER(bars->sl_prini,nprocs)
          }
 /* POSSIBLE ENHANCEMENT:  Here is where one might reset the
    statistics that one is measuring about the parallel execution */
+#ifdef RESET_STATS
+	 BARRIER(bars->sl_onetime,nprocs);
+	 m5_reset_stats(0,0);
+#endif
+
        }
 
        slave2(procid,firstrow,lastrow,numrows,firstcol,lastcol,numcols);
@@ -620,4 +636,10 @@ BARRIER(bars->sl_prini,nprocs)
     CLOCK(t1);
     gp[procid].total_time = t1-gp[procid].total_time;
   }
+
+#ifdef ENABLE_PARSEC_HOOKS
+  __parsec_thread_end();
+#endif
+
+
 }

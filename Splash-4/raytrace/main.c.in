@@ -79,6 +79,12 @@
 #define MAIN	     /* indicate to rt.H that we need main_env for this file*/
 #define VERSION 	"1.00"
 
+#ifdef ENABLE_PARSEC_HOOKS
+#include <hooks.h>
+#endif
+#ifdef RESET_STATS
+#include "m5op.h"
+#endif
 
 #include <stdio.h>
 #include <math.h>
@@ -233,6 +239,10 @@ VOID	StartRayTrace()
 	UINT	end;
 	UINT	lapsed;
 
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_thread_begin();
+#endif
+
 /*
 	LOCK(gm->pidlock)
 	pid = gm->pid++;
@@ -260,6 +270,9 @@ VOID	StartRayTrace()
 
 	/* POSSIBLE ENHANCEMENT:  Here's where one would RESET STATISTICS
 	and TIMING if one wanted to measure only the parallel part */
+#ifdef RESET_STATS
+	m5_reset_stats(0,0);
+#endif
 
 	RayTrace(pid);
 
@@ -269,6 +282,11 @@ VOID	StartRayTrace()
           gm->partime[pid] = (end - begin) & 0x7FFFFFFF;
           if (pid == 0) gm->par_start_time = begin;
         }
+
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_thread_end();
+#endif
+
 	}
 
 
@@ -300,6 +318,9 @@ int	main(int argc, CHAR *argv[])
 	UINT	lapsed;
 	MATRIX	vtrans, Vinv;		/*  View transformation and inverse. */
 
+#ifdef ENABLE_PARSEC_HOOKS
+        __parsec_bench_begin (__splash2_raytrace);
+#endif
 
 	/*
 	 *	First, process command line arguments.
@@ -457,10 +478,14 @@ int	main(int argc, CHAR *argv[])
 	 */
 
 	CLOCK(begin);
-	SPLASH3_ROI_BEGIN();
+#ifdef ENABLE_PARSEC_HOOKS
+        __parsec_roi_begin();
+#endif
 	CREATE(StartRayTrace, gm->nprocs);
 	WAIT_FOR_END(gm->nprocs);
-	SPLASH3_ROI_END();
+#ifdef ENABLE_PARSEC_HOOKS
+        __parsec_roi_end();
+#endif
 	CLOCK(end);
 
 
@@ -508,6 +533,9 @@ int	main(int argc, CHAR *argv[])
         printf("%20s%20d\n","Avg = ",(int) (((double) totalproctime) / ((double) (1.0 * gm->nprocs))));
     }
 
+#ifdef ENABLE_PARSEC_HOOKS
+    __parsec_bench_end();
+#endif
+
 	MAIN_END
 	}
-

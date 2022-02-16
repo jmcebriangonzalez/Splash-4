@@ -35,6 +35,12 @@
 /*  Note: This version works under both the FORK and SPROC models        */
 /*                                                                       */
 /*************************************************************************/
+#ifdef ENABLE_PARSEC_HOOKS
+#include <hooks.h>
+#endif
+#ifdef RESET_STATS
+#include "m5op.h"
+#endif
 
 #include <stdio.h>
 #include <math.h>
@@ -110,6 +116,10 @@ int main(int argc, char *argv[])
   double max_fac, max_solve, max_mod, max_bar;
   double avg_fac, avg_solve, avg_mod, avg_bar;
   unsigned long start;
+
+#ifdef ENABLE_PARSEC_HOOKS
+  __parsec_bench_begin (__splash2_lu_ncb);
+#endif
 
   CLOCK(start);
 
@@ -200,7 +210,7 @@ int main(int argc, char *argv[])
   }
 
 /* POSSIBLE ENHANCEMENT:  Here is where one might distribute the a
-   matrix data across physically distributed memories in a 
+   matrix data across physically distributed memories in a
    round-robin fashion as desired. */
 
   BARINIT(Global->start, P);
@@ -214,12 +224,16 @@ int main(int argc, char *argv[])
     PrintA();
   }
 
-  SPLASH3_ROI_BEGIN();
+#ifdef ENABLE_PARSEC_HOOKS
+  __parsec_roi_begin();
+#endif
 
   CREATE(SlaveStart, P);
   WAIT_FOR_END(P);
 
-  SPLASH3_ROI_END();
+#ifdef ENABLE_PARSEC_HOOKS
+  __parsec_roi_end();
+#endif
 
   if (doprint) {
     printf("\nMatrix after decomposition:\n");
@@ -315,6 +329,10 @@ int main(int argc, char *argv[])
     CheckResult(n, a, rhs);
   }
 
+#ifdef ENABLE_PARSEC_HOOKS
+  __parsec_bench_end();
+#endif
+
   MAIN_END;
 }
 
@@ -329,10 +347,19 @@ void SlaveStart()
 */
 	MyNum = FETCH_ADD(Global->id, 1)
 
+#ifdef ENABLE_PARSEC_HOOKS
+  __parsec_thread_begin();
+#endif
+
 /* POSSIBLE ENHANCEMENT:  Here is where one might pin processes to
    processors to avoid migration */
 
   OneSolve(n, block_size, MyNum, dostats);
+
+#ifdef ENABLE_PARSEC_HOOKS
+  __parsec_thread_end();
+#endif
+
 }
 
 
@@ -356,11 +383,14 @@ void OneSolve(long n, long block_size, long MyNum, long dostats)
 
   /* to remove cold-start misses, all processors begin by touching a[] */
   TouchA(block_size, MyNum);
-  
+
   BARRIER(Global->start, P);
 
 /* POSSIBLE ENHANCEMENT:  Here is where one might reset the
    statistics that one is measuring about the parallel execution */
+#ifdef RESET_STATS
+  m5_reset_stats(0,0);
+#endif
 
   if ((MyNum == 0) || (dostats)) {
     CLOCK(myrs);
@@ -485,7 +515,7 @@ void lu(long n, long bs, long MyNum, struct LocalCopies *lc, long dostats)
 
   strI = n;
   for (k=0, K=0; k<n; k+=bs, K++) {
-    kl = k+bs; 
+    kl = k+bs;
     if (kl>n) {
       kl = n;
     }
@@ -496,7 +526,7 @@ void lu(long n, long bs, long MyNum, struct LocalCopies *lc, long dostats)
 
     /* factor diagonal block */
     if (BlockOwner(K, K) == MyNum) {
-      A = &(a[k+k*n]); 
+      A = &(a[k+k*n]);
       lu0(A, kl-k, strI);
     }
 
@@ -682,4 +712,3 @@ void printerr(char *s)
 {
   fprintf(stderr,"ERROR: %s\n",s);
 }
-

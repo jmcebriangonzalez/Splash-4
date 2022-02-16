@@ -1,0 +1,45 @@
+# Makefile for the PARSEC hooks library
+#
+# Copyright (C) 2006-2009 by Princeton University
+# Author: Christian Bienia
+
+PREFIX=${PARSECDIR}/pkgs/libs/hooks/inst/${PARSECPLAT}
+
+#LIBTOOL=${PARSECDIR}/pkgs/tools/libtool/inst/${PARSECPLAT}/bin/libtool
+LIBTOOL=/usr/bin/libtool
+
+INCLUDEDIR=include
+TARGET=libhooks.la
+OBJS=hooks.lo
+
+uname_M := $(shell sh -c 'uname -m 2>/dev/null || echo not')
+
+ifneq (,$(findstring arm,$(uname_M)))
+	OBJS += m5op_arm.o
+endif
+
+ifneq (,$(findstring x86,$(uname_M)))
+	OBJS += m5op_x86.o
+endif
+
+all: $(OBJS)
+	$(LIBTOOL) --tag=CC --mode=link $(CC) $(CFLAGS) $(OBJS) -o $(TARGET) -rpath /home/jcebrian/gem5/systems/hooks/src/libs
+
+%.lo : %.c
+	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(CFLAGS) -Wall -D_GNU_SOURCE -D_XOPEN_SOURCE=600 -c $<
+
+%.o : %.S
+	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(CFLAGS) -Wall -D_GNU_SOURCE -D_OPEN_SOURCE=600 -o $@ -c $<
+
+clean:
+	$(LIBTOOL) --tag=CC --mode=clean rm -f $(OBJS)
+	$(LIBTOOL) --tag=CC --mode=clean rm -f $(TARGET)
+
+install:
+	mkdir -p $(PREFIX)/include
+	install -c $(INCLUDEDIR)/* $(PREFIX)/include
+	mkdir -p $(PREFIX)/lib
+	$(LIBTOOL) --mode=install install -c $(TARGET) $(PREFIX)/lib
+	$(LIBTOOL) --mode=finish $(PREFIX)/lib
+
+.PHONY: all clean install

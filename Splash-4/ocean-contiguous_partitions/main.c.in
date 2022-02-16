@@ -39,6 +39,10 @@
 /*                                                                       */
 /*************************************************************************/
 
+#ifdef ENABLE_PARSEC_HOOKS
+#include <hooks.h>
+#endif
+
 MAIN_ENV
 
 #define DEFAULT_N      258
@@ -158,6 +162,10 @@ int main(int argc, char *argv[])
    extern char *optarg;
    unsigned long computeend;
    unsigned long start;
+
+#ifdef ENABLE_PARSEC_HOOKS
+   __parsec_bench_begin (__splash2_ocean_cp);
+#endif
 
    CLOCK(start)
 
@@ -472,10 +480,14 @@ int main(int argc, char *argv[])
      printf("                       MULTIGRID OUTPUTS\n");
    }
 
-   SPLASH3_ROI_BEGIN();
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_roi_begin();
+#endif
    CREATE(slave, nprocs);
    WAIT_FOR_END(nprocs);
-   SPLASH3_ROI_END();
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_roi_end();
+#endif
    CLOCK(computeend)
 
    printf("\n");
@@ -533,6 +545,10 @@ int main(int argc, char *argv[])
    printf("    (excludes first timestep)\n");
    printf("\n");
 
+#ifdef ENABLE_PARSEC_HOOKS
+   __parsec_bench_end();
+#endif
+
    MAIN_END
 }
 
@@ -562,4 +578,3 @@ void printerr(char *s)
 {
   fprintf(stderr,"ERROR: %s\n",s);
 }
-

@@ -1,0 +1,14 @@
+cp ./Splash-4/barnes/BARNES-bindedThreads ./bins/BARNES
+cp ./Splash-4/cholesky/CHOLESKY-bindedThreads ./bins/CHOLESKY
+cp ./Splash-4/fft/FFT-bindedThreads ./bins/FFT
+cp ./Splash-4/fmm/FMM-bindedThreads ./bins/FMM
+cp ./Splash-4/lu-contiguous_blocks/LU-CONT-bindedThreads ./bins/LU-CONT
+cp ./Splash-4/lu-non_contiguous_blocks/LU-NOCONT-bindedThreads ./bins/LU-NOCONT
+cp ./Splash-4/ocean-contiguous_partitions/OCEAN-CONT-bindedThreads ./bins/OCEAN-CONT
+cp ./Splash-4/ocean-non_contiguous_partitions/OCEAN-NOCONT-bindedThreads ./bins/OCEAN-NOCONT
+cp ./Splash-4/radiosity/RADIOSITY-bindedThreads ./bins/RADIOSITY
+cp ./Splash-4/radix/RADIX-bindedThreads ./bins/RADIX
+cp ./Splash-4/raytrace/RAYTRACE-bindedThreads ./bins/RAYTRACE
+cp ./Splash-4/volrend/VOLREND-bindedThreads ./bins/VOLREND
+cp ./Splash-4/water-nsquared/WATER-NSQUARED-bindedThreads ./bins/WATER-NSQUARED
+cp ./Splash-4/water-spatial/WATER-SPATIAL-bindedThreads ./bins/WATER-SPATIAL

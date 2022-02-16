@@ -65,6 +65,13 @@ Command line options:
        Default is 1.
 */
 
+#ifdef ENABLE_PARSEC_HOOKS
+#include <hooks.h>
+#endif
+#ifdef RESET_STATS
+#include "m5op.h"
+#endif
+
 MAIN_ENV
 
 #define global  /* nada */
@@ -239,6 +246,10 @@ int main (int argc, string argv[])
 {
    long c;
 
+#ifdef ENABLE_PARSEC_HOOKS
+   __parsec_bench_begin (__splash2_barnes);
+#endif
+
    while ((c = getopt(argc, argv, "h")) != -1) {
      switch(c) {
       case 'h':
@@ -268,11 +279,15 @@ int main (int argc, string argv[])
 
    printf("COMPUTESTART  = %12lu\n",Global->computestart);
 
-   SPLASH3_ROI_BEGIN();
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_roi_begin();
+#endif
    CREATE(SlaveStart, NPROC);
    WAIT_FOR_END(NPROC);
-   SPLASH3_ROI_END();
-   
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_roi_end();
+#endif
+
    CLOCK(Global->computeend);
 
    printf("COMPUTEEND    = %12lu\n",Global->computeend);
@@ -290,6 +305,10 @@ int main (int argc, string argv[])
 	  ((float)(Global->tracktime-Global->partitiontime-
 		   Global->treebuildtime-Global->forcecalctime))/
 	  Global->tracktime);
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_bench_end();
+#endif
+
    MAIN_END;
 }
 
@@ -303,14 +322,14 @@ void ANLinit()
 
    Global = (struct GlobalMemory *) G_MALLOC(sizeof(struct GlobalMemory));
    if (Global==NULL) error("No initialization for Global\n");
-    
+
    BARINIT(Global->Barload, NPROC);
    BARINIT(Global->Bartree, NPROC);
    BARINIT(Global->Barcom, NPROC);
    BARINIT(Global->Baraccel, NPROC);
    BARINIT(Global->Barstart, NPROC);
    BARINIT(Global->Barpos, NPROC);
-   
+
    LOCKINIT(Global->CountLock);
    LOCKINIT(Global->io_lock);
 }
@@ -393,13 +412,17 @@ void SlaveStart()
 {
    long ProcessId;
 
+#ifdef ENABLE_PARSEC_HOOKS
+   __parsec_thread_begin();
+#endif
+
    /* Get unique ProcessId */
 /*   LOCK(Global->CountLock);
      ProcessId = Global->current_id++;
    UNLOCK(Global->CountLock);
 */
 	ProcessId = FETCH_ADD(Global->current_id, 1);
-	
+
 /* POSSIBLE ENHANCEMENT:  Here is where one might pin processes to
    processors to avoid migration */
 
@@ -451,6 +474,11 @@ void SlaveStart()
 //      printtree(Global->G_root);
 //      printf("Going to next step!!!\n");
    }
+
+#ifdef ENABLE_PARSEC_HOOKS
+   __parsec_thread_end();
+#endif
+
 }
 
 
@@ -626,6 +654,10 @@ void stepsystem(long ProcessId)
     if (Local[ProcessId].nstep == 2) {
 /* POSSIBLE ENHANCEMENT:  Here is where one might reset the
    statistics that one is measuring about the parallel execution */
+#ifdef RESET_STATS
+	BARRIER(Global->Barstart,NPROC);
+	m5_reset_stats(0,0);
+#endif
     }
 
     if ((ProcessId == 0) && (Local[ProcessId].nstep >= 2)) {

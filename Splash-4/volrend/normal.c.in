@@ -24,6 +24,10 @@
 #include <string.h>
 #include "incl.h"
 
+#ifdef ENABLE_PARSEC_HOOKS
+#include <hooks.h>
+#endif
+
 /* The following declarations show the layout of the .norm file.             */
 /* If changed, the version number must be incremented and code               */
 /* written to handle loading of both old and current versions.               */
@@ -110,8 +114,11 @@ void Normal_Compute()
   UNLOCK(Global->IndexLock);
 */
   my_node = FETCH_ADD(Global->Index, 1)
-  
   my_node = my_node%num_nodes;
+
+#ifdef ENABLE_PARSEC_HOOKS
+    __parsec_thread_begin();
+#endif
 
 /*  POSSIBLE ENHANCEMENT:  Here's where one might bind the process to a
     processor, if one wanted to.
@@ -177,9 +184,13 @@ void Normal_Compute()
   }
 
 #ifndef SERIAL_PREPROC
-  BARRIER(Global->SlaveBarrier,num_nodes)
-
+  BARRIER(Global->SlaveBarrier,num_nodes);
 #endif
+
+#ifdef ENABLE_PARSEC_HOOKS
+      __parsec_thread_end();
+#endif
+
 }
 
 

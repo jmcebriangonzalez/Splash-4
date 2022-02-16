@@ -23,6 +23,10 @@
 #include <string.h>
 #include "incl.h"
 
+#ifdef ENABLE_PARSEC_HOOKS
+#include <hooks.h>
+#endif
+
 #define WRITE_PYR(IBIT,ILEVEL,IZ,IY,IX)\
 				(PYR_ADDRESS(ILEVEL,IZ,IY,IX),\
 				 *pyr_address2|=(IBIT)<<pyr_offset2)
@@ -150,13 +154,17 @@ void Compute_Base()
   long xstart,xstop,ystart,ystop;
   long my_node;
 
+#ifdef ENABLE_PARSEC_HOOKS
+  __parsec_thread_begin();
+#endif
+
 /*
   LOCK(Global->IndexLock);
   my_node = Global->Index++;
   UNLOCK(Global->IndexLock);
 */
   my_node = FETCH_ADD(Global->Index, 1)
- 
+
   my_node = my_node%num_nodes;
 
 /*  POSSIBLE ENHANCEMENT:  Here's where one might bind the process to a
@@ -204,9 +212,13 @@ this barrier either.
 */
 
 #ifndef SERIAL_PREPROC
-  BARRIER(Global->SlaveBarrier,num_nodes)
-
+  BARRIER(Global->SlaveBarrier,num_nodes);
 #endif
+
+#ifdef ENABLE_PARSEC_HOOKS
+      __parsec_thread_end();
+#endif
+
 }
 
 
@@ -218,13 +230,17 @@ void Or_Neighbors_In_Base()
   long pmap_partition,zstart,zstop;
   long my_node;
 
+#ifdef ENABLE_PARSEC_HOOKS
+  __parsec_thread_begin();
+#endif
+
 /*
   LOCK(Global->IndexLock);
   my_node = Global->Index++;
   UNLOCK(Global->IndexLock);
 */
   my_node = FETCH_ADD(Global->Index, 1)
- 
+
   my_node = my_node%num_nodes;
 
 /*  POSSIBLE ENHANCEMENT:  Here's where one might bind the process to a
@@ -273,9 +289,13 @@ need this barrier either.
 */
 
 #ifndef SERIAL_PREPROC
-  BARRIER(Global->SlaveBarrier,num_nodes)
-
+  BARRIER(Global->SlaveBarrier,num_nodes);
 #endif
+
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_thread_end();
+#endif
+
 }
 
 

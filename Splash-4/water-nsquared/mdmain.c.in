@@ -26,6 +26,10 @@ EXTERN_ENV
 #include "split.h"
 #include "global.h"
 
+#ifdef RESET_STATS
+#include "m5op.h"
+#endif
+
 /************************************************************************/
 
 /* routine that implements the time-steps. Called by main routine and calls others */
@@ -59,6 +63,10 @@ double MDMAIN(long NSTEP, long NPRINT, long NSAVE, long NORD1, long ProcID)
            cold-start effects.  Recommended to do this at the beginning of the
            second timestep; i.e. if (i == 2).
            */
+        if(i == 2) {
+            BARRIER(gl->start, NumProcs);
+	    m5_reset_stats(0,0);
+        }
 
         /* initialize various shared sums */
         if (ProcID == 0) {

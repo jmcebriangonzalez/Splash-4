@@ -1,0 +1,14 @@
+cp ./Splash-4/barnes/BARNES ./bins/BARNES
+cp ./Splash-4/cholesky/CHOLESKY ./bins/CHOLESKY
+cp ./Splash-4/fft/FFT ./bins/FFT
+cp ./Splash-4/fmm/FMM ./bins/FMM
+cp ./Splash-4/lu-contiguous_blocks/LU-CONT ./bins/LU-CONT
+cp ./Splash-4/lu-non_contiguous_blocks/LU-NOCONT ./bins/LU-NOCONT
+cp ./Splash-4/ocean-contiguous_partitions/OCEAN-CONT ./bins/OCEAN-CONT
+cp ./Splash-4/ocean-non_contiguous_partitions/OCEAN-NOCONT ./bins/OCEAN-NOCONT
+cp ./Splash-4/radiosity/RADIOSITY ./bins/RADIOSITY
+cp ./Splash-4/radix/RADIX ./bins/RADIX
+cp ./Splash-4/raytrace/RAYTRACE ./bins/RAYTRACE
+cp ./Splash-4/volrend/VOLREND ./bins/VOLREND
+cp ./Splash-4/water-nsquared/WATER-NSQUARED ./bins/WATER-NSQUARED
+cp ./Splash-4/water-spatial/WATER-SPATIAL ./bins/WATER-SPATIAL

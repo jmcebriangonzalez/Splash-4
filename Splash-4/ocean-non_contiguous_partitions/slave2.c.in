@@ -24,6 +24,10 @@
 #include <stdlib.h>
 #include "decs.h"
 
+#ifdef ENABLE_PARSEC_HOOKS
+#include <hooks.h>
+#endif
+
 void slave2(long procid, long firstrow, long lastrow, long numrows, long firstcol, long lastcol, long numcols)
 {
    long i;
@@ -49,6 +53,10 @@ void slave2(long procid, long firstrow, long lastrow, long numrows, long firstco
    double psiaipriv;
    long multi_start;
    long multi_end;
+
+#ifdef ENABLE_PARSEC_HOOKS
+    __parsec_thread_begin();
+#endif
 
    ressqr = lev_res[numlev-1] * lev_res[numlev-1];
 
@@ -981,4 +989,9 @@ void slave2(long procid, long firstrow, long lastrow, long numrows, long firstco
    }
 
    BARRIER(bars->sl_phase_10,nprocs)   
+
+#ifdef ENABLE_PARSEC_HOOKS
+       __parsec_thread_end();
+#endif
+
 }

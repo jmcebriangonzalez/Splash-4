@@ -32,6 +32,12 @@
 #endif
 
 /* ANL macro initialization */
+#ifdef ENABLE_PARSEC_HOOKS
+#include <hooks.h>
+#endif
+#ifdef RESET_STATS
+#include "m5op.h"
+#endif
 
 MAIN_ENV;
 
@@ -156,6 +162,10 @@ int main(int argc, char *argv[])
     long total_wait_time, max_wait_time, min_wait_time;
     long total_vertex_time, max_vertex_time, min_vertex_time;
 
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_bench_begin (__splash2_radiosity);
+#endif
+
     /* Parse arguments */
     parse_args(argc, argv) ;
     choices[2].init_value = model_selector ;
@@ -235,7 +245,9 @@ int main(int argc, char *argv[])
 
             /* Time stamp */
             CLOCK( time_rad_start );
-            SPLASH3_ROI_BEGIN();
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_roi_begin();
+#endif
 
             global->index = 0;
             for( i = 0 ; i < n_processors ; i++ )
@@ -246,7 +258,9 @@ int main(int argc, char *argv[])
             /* And start processing */
             CREATE(radiosity, n_processors);
             WAIT_FOR_END(n_processors);
-            SPLASH3_ROI_END();
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_roi_end();
+#endif
 
             /* Time stamp */
             CLOCK( time_rad_end );
@@ -326,6 +340,11 @@ int main(int argc, char *argv[])
             g_start( expose_callback,
                     N_SLIDERS, sliders, N_CHOICES, choices ) ;
         }
+
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_bench_end();
+#endif
+
     MAIN_END;
     exit(0) ;
 }
@@ -380,7 +399,9 @@ void start_radiosity(long val)
 
             /* Time stamp */
             CLOCK( time_rad_start ) ;
-
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_roi_begin();
+#endif
 
             global->index = 0;
 
@@ -394,6 +415,10 @@ void start_radiosity(long val)
             CREATE(radiosity, n_processors);
             WAIT_FOR_END(n_processors);
             /* Time stamp */
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_roi_end();
+#endif
+
             CLOCK( time_rad_end );
 
             /* Print out running time */
@@ -485,6 +510,9 @@ void start_radiosity(long val)
                 {
                 case 0:
                     /* Step execute as a single process */
+#ifdef ENABLE_PARSEC_HOOKS
+		    __parsec_roi_begin();
+#endif
 
                     global->index = 1;
                     /* Create slave processes */
@@ -506,14 +534,14 @@ void start_radiosity(long val)
                 case 1:
                     if( init_ray_tasks(0) )
                         {
-                            BARRIER(global->barrier, n_processors)
+                            BARRIER(global->barrier, n_processors);
                             process_tasks(0) ;
                         }
                     else
                         state++ ;
                     break ;
                 default:
-                    BARRIER(global->barrier, n_processors)
+                    BARRIER(global->barrier, n_processors);
                     init_radavg_tasks( RAD_AVERAGING_MODE, 0 ) ;
                     process_tasks(0) ;
                     init_radavg_tasks( RAD_NORMALIZING_MODE, 0 ) ;
@@ -521,6 +549,10 @@ void start_radiosity(long val)
 
                     WAIT_FOR_END(n_processors/* - 1*/)
                         state = -1 ;
+#ifdef ENABLE_PARSEC_HOOKS
+		    __parsec_roi_end();
+#endif
+
                 }
 
             /* Display image */
@@ -808,6 +840,11 @@ void radiosity()
 {
     long process_id;
     long rad_start, refine_done, vertex_start, vertex_done;
+
+#ifdef ENABLE_PARSEC_HOOKS
+    __parsec_thread_begin();
+#endif
+
 /*
     LOCK(global->index_lock);
     process_id = global->index++;
@@ -824,6 +861,10 @@ void radiosity()
 
     /* POSSIBLE ENHANCEMENT:  Here is where one might reset the
        statistics that one is measuring about the parallel execution */
+#ifdef RESET_STATS
+    BARRIER(global->barrier, n_processors);
+    m5_reset_stats(0,0);
+#endif
 
     /* Decompose model objects into patches and build the BSP tree */
     /* Create the initial tasks */
@@ -834,7 +875,7 @@ void radiosity()
     while( init_ray_tasks(process_id) )
         {
             /* Wait till tasks are put in the queue */
-            BARRIER(global->barrier, n_processors)
+            BARRIER(global->barrier, n_processors);
             /* Then perform ray-gathering and BF-refinement till the
                solution converges */
             process_tasks(process_id) ;
@@ -843,7 +884,7 @@ void radiosity()
     if ((process_id == 0) || (dostats))
         CLOCK(refine_done);
 
-    BARRIER(global->barrier, n_processors)
+    BARRIER(global->barrier, n_processors);
 
     if ((process_id == 0) || (dostats))
         CLOCK(vertex_start);
@@ -866,6 +907,10 @@ void radiosity()
         timing[process_id]->vertex_time = vertex_done - vertex_start;
         timing[process_id]->wait_time = vertex_start - refine_done;
     }
+
+#ifdef ENABLE_PARSEC_HOOKS
+    __parsec_thread_end();
+#endif
 
 }
 
@@ -1212,4 +1257,3 @@ void print_usage()
     fprintf( stderr, "   -verbose   Verbose mode (don't use for SPLASH)\n" ) ;
     fprintf( stderr, "   -s   Measure per-process timing (don't use for SPLASH)\n" ) ;
 }
-

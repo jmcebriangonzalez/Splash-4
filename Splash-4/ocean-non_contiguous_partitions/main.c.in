@@ -30,6 +30,10 @@
 #include <unistd.h>
 #include "decs.h"
 
+#ifdef ENABLE_PARSEC_HOOKS
+#include <hooks.h>
+#endif
+
 MAIN_ENV
 
 #define DEFAULT_N      258
@@ -126,6 +130,10 @@ int main(int argc, char *argv[])
    long ch;
    unsigned long start;
    double *tmp_ptr;
+
+#ifdef ENABLE_PARSEC_HOOKS
+   __parsec_bench_begin (__splash2_ocean_ncp);
+#endif
 
    CLOCK(start)
 
@@ -438,10 +446,14 @@ int main(int argc, char *argv[])
      printf("                       MULTIGRID OUTPUTS\n");
    }
 
-   SPLASH3_ROI_BEGIN();
+#ifdef ENABLE_PARSEC_HOOKS
+   __parsec_roi_begin();
+#endif
    CREATE(slave, nprocs);
    WAIT_FOR_END(nprocs);
-   SPLASH3_ROI_END();
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_roi_end();
+#endif
    CLOCK(computeend)
 
    printf("\n");
@@ -498,6 +510,10 @@ int main(int argc, char *argv[])
    printf("Total time without initialization : %16lu\n", computeend-global->trackstart);
    printf("    (excludes first timestep)\n");
    printf("\n");
+
+#ifdef ENABLE_PARSEC_HOOKS
+   __parsec_bench_end();
+#endif
 
    MAIN_END
 }

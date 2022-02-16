@@ -5,6 +5,15 @@ Splash-4 is a benchmark suite based on Splash-3 but with enfasis in atomic instr
 
 ## Building and Running
 
+############### NOTE THIS IS ONLY FOR HOOKS AND M5 BRANCHES ###################
+
+For hooks and m5 branch -> cd hooks_m5; make -f Makefile.x86; make clean; make
+Modify Makefile.config as needed (e.g., remove the RESET_STAT definition)
+Build with "make bindThreads" to have binded threads
+Gather binaries with ./get_bins_binded.sh (places them in the bins folder)
+
+##############################################################################
+
 Splash-4 does not require any special installation step.
 
 In order to build Splash-4, a relatively modern C compiler with C11 support is
@@ -18,14 +27,14 @@ benchmark folder before executing it.
 
 ## Citing Splash-4
 
-    Eduardo José Gómez-Hernández, Ruixiang Shao, Christos Sakalis, 
-    Stefanos Kaxiras, Alberto Ros, "Splash-4: Improving Scalability 
-    with Lock-Free Constructs". International Symposium on Performance 
-    Analysis of Systems and Software (ISPASS), pages 235--236, 
+    Eduardo José Gómez-Hernández, Ruixiang Shao, Christos Sakalis,
+    Stefanos Kaxiras, Alberto Ros, "Splash-4: Improving Scalability
+    with Lock-Free Constructs". International Symposium on Performance
+    Analysis of Systems and Software (ISPASS), pages 235--236,
     Worldwide event, March 2021
 
 ### BibTeX
-    
+
     @InProceedings{ejgomez-ispass21,
       author = 	     {Eduardo Jos{\'e} G{\'o}mez-Hern{\'a}ndez and Ruixiang Shao and Christos Sakalis and Stefanos Kaxiras and Alberto Ros},
       title = 	     {Splash-4: Improving Scalability with Lock-Free Constructs},
@@ -77,4 +86,4 @@ based on the original Splash-2 characterization paper by Woo et al. [1].
 Anoop Gupta. 1995. The SPLASH-2 programs: characterization and methodological
 considerations. In Proceedings of the 22nd annual international symposium on
 Computer architecture (ISCA '95). ACM, New York, NY, USA, 24-36.
-DOI=http://dx.doi.org/10.1145/223982.223990 
+DOI=http://dx.doi.org/10.1145/223982.223990

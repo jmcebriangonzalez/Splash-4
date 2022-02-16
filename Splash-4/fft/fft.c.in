@@ -42,12 +42,18 @@
 /*  Note: This version works under both the FORK and SPROC models        */
 /*                                                                       */
 /*************************************************************************/
+#ifdef ENABLE_PARSEC_HOOKS
+#include <hooks.h>
+#endif
+#ifdef RESET_STATS
+#include "m5op.h"
+#endif
 
 #include <stdio.h>
 #include <math.h>
 #include <unistd.h>
 #define PAGE_SIZE               4096
-#define NUM_CACHE_LINES        65536 
+#define NUM_CACHE_LINES        65536
 #define LOG2_LINE_SIZE             4
 #define PI                         3.1416
 #define DEFAULT_M                 10
@@ -124,7 +130,7 @@ double drand48(void);
 
 int main(int argc, char *argv[])
 {
-  long i; 
+  long i;
   long c;
   extern char *optarg;
   long m1;
@@ -132,11 +138,15 @@ int main(int argc, char *argv[])
   long pages;
   unsigned long start;
 
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_bench_begin (__splash2_fft);
+#endif
+
   CLOCK(start);
 
   while ((c = getopt(argc, argv, "p:m:n:l:stoh")) != -1) {
     switch(c) {
-      case 'p': P = atoi(optarg); 
+      case 'p': P = atoi(optarg);
                 if (P < 1) {
                   printerr("P must be >= 1\n");
                   exit(-1);
@@ -145,32 +155,32 @@ int main(int argc, char *argv[])
                   printerr("P must be a power of 2\n");
                   exit(-1);
                 }
-	        break;  
-      case 'm': M = atoi(optarg); 
+	        break;
+      case 'm': M = atoi(optarg);
                 m1 = M/2;
                 if (2*m1 != M) {
                   printerr("M must be even\n");
                   exit(-1);
                 }
-	        break;  
-      case 'n': num_cache_lines = atoi(optarg); 
+	        break;
+      case 'n': num_cache_lines = atoi(optarg);
                 orig_num_lines = num_cache_lines;
                 if (num_cache_lines < 1) {
                   printerr("Number of cache lines must be >= 1\n");
                   exit(-1);
                 }
-	        break;  
-      case 'l': log2_line_size = atoi(optarg); 
+	        break;
+      case 'l': log2_line_size = atoi(optarg);
                 if (log2_line_size < 0) {
                   printerr("Log base 2 of cache line length in bytes must be >= 0\n");
                   exit(-1);
                 }
-	        break;  
-      case 's': dostats = !dostats; 
 	        break;
-      case 't': test_result = !test_result; 
+      case 's': dostats = !dostats;
 	        break;
-      case 'o': doprint = !doprint; 
+      case 't': test_result = !test_result;
+	        break;
+      case 'o': doprint = !doprint;
 	        break;
       case 'h': printf("Usage: FFT <options>\n\n");
                 printf("options:\n");
@@ -208,7 +218,7 @@ int main(int argc, char *argv[])
     printf("     Computing transpose blocking factor\n");
     factor = (2*sizeof(double)) / line_size;
     num_cache_lines = orig_num_lines / factor;
-  }  
+  }
   if (line_size <= 2*sizeof(double)) {
     pad_length = 1;
   } else {
@@ -235,11 +245,11 @@ int main(int argc, char *argv[])
   Global = (struct GlobalMemory *) G_MALLOC(sizeof(struct GlobalMemory));
   x = (double *) G_MALLOC(2*(N+rootN*pad_length)*sizeof(double)+PAGE_SIZE);
   trans = (double *) G_MALLOC(2*(N+rootN*pad_length)*sizeof(double)+PAGE_SIZE);
-  umain = (double *) G_MALLOC(2*rootN*sizeof(double));  
+  umain = (double *) G_MALLOC(2*rootN*sizeof(double));
   umain2 = (double *) G_MALLOC(2*(N+rootN*pad_length)*sizeof(double)+PAGE_SIZE);
 
-  Global->transtimes = (long *) G_MALLOC(P*sizeof(long));  
-  Global->totaltimes = (long *) G_MALLOC(P*sizeof(long));  
+  Global->transtimes = (long *) G_MALLOC(P*sizeof(long));
+  Global->totaltimes = (long *) G_MALLOC(P*sizeof(long));
   if (Global == NULL) {
     printerr("Could not malloc memory for Global\n");
     exit(-1);
@@ -261,17 +271,17 @@ int main(int argc, char *argv[])
   trans = (double *) (((unsigned long) trans) + PAGE_SIZE - ((unsigned long) trans) % PAGE_SIZE);
   umain2 = (double *) (((unsigned long) umain2) + PAGE_SIZE - ((unsigned long) umain2) % PAGE_SIZE);
 
-/* In order to optimize data distribution, the data structures x, trans, 
-   and umain2 have been aligned so that each begins on a page boundary. 
-   This ensures that the amount of padding calculated by the program is 
-   such that each processor's partition ends on a page boundary, thus 
-   ensuring that all data from these structures that are needed by a 
+/* In order to optimize data distribution, the data structures x, trans,
+   and umain2 have been aligned so that each begins on a page boundary.
+   This ensures that the amount of padding calculated by the program is
+   such that each processor's partition ends on a page boundary, thus
+   ensuring that all data from these structures that are needed by a
    processor can be allocated to its local memory */
 
 /* POSSIBLE ENHANCEMENT:  Here is where one might distribute the x,
-   trans, and umain2 data structures across physically distributed 
+   trans, and umain2 data structures across physically distributed
    memories as desired.
-   
+
    One way to place data is as follows:
 
    double *base;
@@ -303,7 +313,7 @@ int main(int argc, char *argv[])
   printf("\n");
 
   BARINIT(Global->start, P);
-  
+
   LOCKINIT(Global->idlock);
   Global->id = 0;
   InitX(x);                  /* place random values in x */
@@ -321,12 +331,16 @@ int main(int argc, char *argv[])
 
   /* fire off P processes */
 
-  SPLASH3_ROI_BEGIN();
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_roi_begin();
+#endif
 
   CREATE(SlaveStart, P);
   WAIT_FOR_END(P);
 
-  SPLASH3_ROI_END();
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_roi_end();
+#endif
 
   if (doprint) {
     if (test_result) {
@@ -418,6 +432,10 @@ int main(int argc, char *argv[])
     }
   }
 
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_bench_end();
+#endif
+
   MAIN_END;
 }
 
@@ -427,54 +445,63 @@ void SlaveStart()
   long i;
   long MyNum;
   double *upriv;
-  long initdone; 
-  long finish; 
+  long initdone;
+  long finish;
   long l_transtime=0;
-  long MyFirst; 
+  long MyFirst;
   long MyLast;
 /*
   LOCK(Global->idlock);
     MyNum = Global->id;
     Global->id++;
-  UNLOCK(Global->idlock); 
+  UNLOCK(Global->idlock);
 */
   MyNum = FETCH_ADD(Global->id, 1)
+
+#ifdef ENABLE_PARSEC_HOOKS
+    __parsec_thread_begin();
+#endif
+
 /* POSSIBLE ENHANCEMENT:  Here is where one might pin processes to
    processors to avoid migration */
-   
+
   BARRIER(Global->start, P);
 
-  upriv = (double *) malloc(2*(rootN-1)*sizeof(double));  
+  upriv = (double *) malloc(2*(rootN-1)*sizeof(double));
   if (upriv == NULL) {
     fprintf(stderr,"Proc %ld could not malloc memory for upriv\n",MyNum);
     exit(-1);
   }
   for (i=0;i<2*(rootN-1);i++) {
     upriv[i] = umain[i];
-  }   
+  }
 
   MyFirst = rootN*MyNum/P;
   MyLast = rootN*(MyNum+1)/P;
 
   TouchArray(x, trans, umain2, upriv, MyFirst, MyLast);
+
   BARRIER(Global->start, P);
 
 /* POSSIBLE ENHANCEMENT:  Here is where one might reset the
    statistics that one is measuring about the parallel execution */
+#ifdef RESET_STATS
+  m5_reset_stats(0,0);
+#endif
 
   if ((MyNum == 0) || (dostats)) {
     CLOCK(initdone);
   }
 
   /* perform forward FFT */
-  FFT1D(1, M, N, x, trans, upriv, umain2, MyNum, &l_transtime, MyFirst, 
+  FFT1D(1, M, N, x, trans, upriv, umain2, MyNum, &l_transtime, MyFirst,
 	MyLast, pad_length, test_result, dostats);
 
   /* perform backward FFT */
   if (test_result) {
-    FFT1D(-1, M, N, x, trans, upriv, umain2, MyNum, &l_transtime, MyFirst, 
+    FFT1D(-1, M, N, x, trans, upriv, umain2, MyNum, &l_transtime, MyFirst,
 	  MyLast, pad_length, test_result, dostats);
-  }  
+  }
 
   if ((MyNum == 0) || (dostats)) {
     CLOCK(finish);
@@ -485,6 +512,11 @@ void SlaveStart()
     Global->finishtime = finish;
     Global->initdonetime = initdone;
   }
+
+#ifdef ENABLE_PARSEC_HOOKS
+	__parsec_thread_end();
+#endif
+
 }
 
 
@@ -496,15 +528,15 @@ double TouchArray(double *x, double *scratch, double *u, double *upriv, long MyF
   /* touch my data */
   for (j=0;j<2*(rootN-1);j++) {
     tot += upriv[j];
-  }   
+  }
   for (j=MyFirst; j<MyLast; j++) {
     k = j * (rootN + pad_length);
     for (i=0;i<rootN;i++) {
-      tot += x[2*(k+i)] + x[2*(k+i)+1] + 
+      tot += x[2*(k+i)] + x[2*(k+i)+1] +
              scratch[2*(k+i)] + scratch[2*(k+i)+1] +
 	     u[2*(k+i)] + u[2*(k+i)+1];
     }
-  }  
+  }
   return tot;
 }
 
@@ -543,16 +575,16 @@ void InitX(double *x)
 
 void InitU(long N, double *u)
 {
-  long q; 
-  long j; 
-  long base; 
+  long q;
+  long j;
+  long base;
   long n1;
 
-  for (q=0; 1<<q<N; q++) {  
+  for (q=0; 1<<q<N; q++) {
     n1 = 1<<q;
     base = n1-1;
     for (j=0; j<n1; j++) {
-      if (base+j > rootN-1) { 
+      if (base+j > rootN-1) {
 	return;
       }
       u[2*(base+j)] = cos(2.0*PI*j/(2*n1));
@@ -564,11 +596,11 @@ void InitU(long N, double *u)
 
 void InitU2(long N, double *u, long n1)
 {
-  long i,j,k; 
+  long i,j,k;
 
-  for (j=0; j<n1; j++) {  
+  for (j=0; j<n1; j++) {
     k = j*(rootN+pad_length);
-    for (i=0; i<n1; i++) {  
+    for (i=0; i<n1; i++) {
       u[2*(k+i)] = cos(2.0*PI*i*j/(N));
       u[2*(k+i)+1] = -sin(2.0*PI*i*j/(N));
     }
@@ -578,8 +610,8 @@ void InitU2(long N, double *u, long n1)
 
 long BitReverse(long M, long k)
 {
-  long i; 
-  long j; 
+  long i;
+  long j;
   long tmp;
 
   j = 0;
@@ -596,7 +628,7 @@ void FFT1D(long direction, long M, long N, double *x, double *scratch, double *u
            long MyNum, long *l_transtime, long MyFirst, long MyLast, long pad_length, long test_result, long dostats)
 {
   long j;
-  long m1; 
+  long m1;
   long n1;
   unsigned long clocktime1;
   unsigned long clocktime2;
@@ -613,7 +645,7 @@ void FFT1D(long direction, long M, long N, double *x, double *scratch, double *u
 
   /* transpose from x into scratch */
   Transpose(n1, x, scratch, MyNum, MyFirst, MyLast, pad_length);
-  
+
   if ((MyNum == 0) || (dostats)) {
     CLOCK(clocktime2);
     *l_transtime += (clocktime2-clocktime1);
@@ -624,7 +656,7 @@ void FFT1D(long direction, long M, long N, double *x, double *scratch, double *u
   for (j=MyFirst; j<MyLast; j++) {
     FFT1DOnce(direction, m1, n1, upriv, &scratch[2*j*(n1+pad_length)]);
     TwiddleOneCol(direction, n1, j, umain2, &scratch[2*j*(n1+pad_length)], pad_length);
-  }  
+  }
 
   BARRIER(Global->start, P);
 
@@ -647,6 +679,7 @@ void FFT1D(long direction, long M, long N, double *x, double *scratch, double *u
     if (direction == -1)
       Scale(n1, N, &x[2*j*(n1+pad_length)]);
   }
+
   BARRIER(Global->start, P);
 
   if ((MyNum == 0) || (dostats)) {
@@ -662,15 +695,16 @@ void FFT1D(long direction, long M, long N, double *x, double *scratch, double *u
     *l_transtime += (clocktime2-clocktime1);
     printf("Step 5: %8lu\n", clocktime2-clocktime1);
   }
-  
+
   BARRIER(Global->start, P);
 
   /* copy columns from scratch to x */
-  if ((test_result) || (doprint)) {  
+  if ((test_result) || (doprint)) {
     for (j=MyFirst; j<MyLast; j++) {
-      CopyColumn(n1, &scratch[2*j*(n1+pad_length)], &x[2*j*(n1+pad_length)]); 
-    }  
-  }  
+      CopyColumn(n1, &scratch[2*j*(n1+pad_length)], &x[2*j*(n1+pad_length)]);
+    }
+  }
+
   BARRIER(Global->start, P);
 }
 
@@ -678,15 +712,15 @@ void FFT1D(long direction, long M, long N, double *x, double *scratch, double *u
 void TwiddleOneCol(long direction, long n1, long j, double *u, double *x, long pad_length)
 {
   long i;
-  double omega_r; 
-  double omega_c; 
-  double x_r; 
+  double omega_r;
+  double omega_c;
+  double x_r;
   double x_c;
 
   for (i=0; i<n1; i++) {
     omega_r = u[2*(j*(n1+pad_length)+i)];
-    omega_c = direction*u[2*(j*(n1+pad_length)+i)+1];  
-    x_r = x[2*i]; 
+    omega_c = direction*u[2*(j*(n1+pad_length)+i)+1];
+    x_r = x[2*i];
     x_c = x[2*i+1];
     x[2*i] = omega_r*x_r - omega_c*x_c;
     x[2*i+1] = omega_r*x_c + omega_c*x_r;
@@ -707,10 +741,10 @@ void Scale(long n1, long N, double *x)
 
 void Transpose(long n1, double *src, double *dest, long MyNum, long MyFirst, long MyLast, long pad_length)
 {
-  long i; 
-  long j; 
-  long k; 
-  long l; 
+  long i;
+  long j;
+  long k;
+  long l;
   long m;
   long blksize;
   long numblks;
@@ -818,20 +852,20 @@ void Reverse(long N, long M, double *x)
 
 void FFT1DOnce(long direction, long M, long N, double *u, double *x)
 {
-  long j; 
-  long k; 
-  long q; 
-  long L; 
-  long r; 
+  long j;
+  long k;
+  long q;
+  long L;
+  long r;
   long Lstar;
-  double *u1; 
-  double *x1; 
+  double *u1;
+  double *x1;
   double *x2;
-  double omega_r; 
-  double omega_c; 
-  double tau_r; 
-  double tau_c; 
-  double x_r; 
+  double omega_r;
+  double omega_c;
+  double tau_r;
+  double tau_c;
+  double x_r;
   double x_c;
   long iter_num = 0;
 
@@ -845,13 +879,13 @@ void FFT1DOnce(long direction, long M, long N, double *u, double *x)
       x2 = &x[2*(k*L+Lstar)];
       for (j=0; j<Lstar; j++) {
         iter_num ++;
-	omega_r = u1[2*j]; 
+	omega_r = u1[2*j];
         omega_c = direction*u1[2*j+1];
-	x_r = x2[2*j]; 
+	x_r = x2[2*j];
         x_c = x2[2*j+1];
 	tau_r = omega_r*x_r - omega_c*x_c;
 	tau_c = omega_r*x_c + omega_c*x_r;
-	x_r = x1[2*j]; 
+	x_r = x1[2*j];
         x_c = x1[2*j+1];
 	x2[2*j] = x_r - tau_r;
 	x2[2*j+1] = x_c - tau_c;
@@ -913,4 +947,3 @@ long log_2(long number)
     return(-1);
   }
 }
-
