@@ -84,6 +84,13 @@
 #define begin_isolate_vectorpower_section 0x6A
 #define end_isolate_vectorpower_section   0x6B
 
+#define begin_syncmark_lockAcquire 0x70
+#define end_syncmark_lockAcquire 0x71
+#define begin_syncmark_lockRelease 0x72
+#define end_syncmark_lockRelease 0x73
+#define begin_syncmark_barrier 0x74
+#define end_syncmark_barrier 0x75
+
 // These operations are for critical path annotation
 #define annotate_func     0x55
 #define an_bsm            0x1
@@ -131,7 +138,13 @@
     M5OP(cr_begin_section, begin_compactable_section, 0); \
     M5OP(cr_end_section, end_compactable_section, 0); \
     M5OP(isolate_vectorpower_begin_section, begin_isolate_vectorpower_section, 0); \
-    M5OP(isolate_vectorpower_end_section, end_isolate_vectorpower_section, 0);
+    M5OP(isolate_vectorpower_end_section, end_isolate_vectorpower_section, 0); \
+    M5OP(syncmark_lockAcquire_begin, begin_syncmark_lockAcquire, 0); \
+    M5OP(syncmark_lockAcquire_end, end_syncmark_lockAcquire, 0); \
+    M5OP(syncmark_lockRelease_begin, begin_syncmark_lockRelease, 0);	\
+    M5OP(syncmark_lockRelease_end, end_syncmark_lockRelease, 0);	\
+    M5OP(syncmark_barrier_begin, begin_syncmark_barrier, 0);	\
+    M5OP(syncmark_barrier_end, end_syncmark_barrier, 0);
 
 
 

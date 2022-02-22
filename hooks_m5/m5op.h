@@ -68,6 +68,13 @@ void cr_end_section(void);
 void isolate_vectorpower_begin_section(void);
 void isolate_vectorpower_end_section(void);
 
+void syncmark_lockAcquire_begin(void);
+void syncmark_lockAcquire_end(void);
+void syncmark_lockRelease_begin(void);
+void syncmark_lockRelease_end(void);
+void syncmark_barrier_begin(void);
+void syncmark_barrier_end(void);
+
 // These operations are for critical path annotation
 void m5a_bsm(char *sm, const void *id, int flags);
 void m5a_esm(char *sm);

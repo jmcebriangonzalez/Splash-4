@@ -9,12 +9,12 @@ m4_define(SPLASH3_ROI_BEGIN, `')
 m4_define(SPLASH3_ROI_END, `')
 
 m4_dnl Region markers
-m4_define(_NOTE_START_LOCK, `')
-m4_define(_NOTE_END_LOCK, `')
-m4_define(_NOTE_START_UNLOCK, `')
-m4_define(_NOTE_END_UNLOCK, `')
-m4_define(_NOTE_START_BARRIER, `')
-m4_define(_NOTE_END_BARRIER, `')
+m4_define(_NOTE_START_LOCK, `syncmark_lockAcquire_begin();')
+m4_define(_NOTE_END_LOCK, `syncmark_lockAcquire_end();')
+m4_define(_NOTE_START_UNLOCK, `syncmark_lockRelease_begin();')
+m4_define(_NOTE_END_UNLOCK, `syncmark_lockRelease_end();')
+m4_define(_NOTE_START_BARRIER, `syncmark_barrier_begin();')
+m4_define(_NOTE_END_BARRIER, `syncmark_barrier_end();')
 m4_define(_NOTE_START_ATOMIC, `')
 m4_define(_NOTE_END_ATOMIC, `')
 m4_define(_NOTE_START_CMPXCHG, `')
@@ -186,6 +186,7 @@ m4_define(INCLUDES,`
 #include <stdlib.h>
 #include <semaphore.h>
 #include <assert.h>
+#include "m5op.h"
 #if __STDC_VERSION__ >= 201112L
 #include <stdatomic.h>
 #endif
