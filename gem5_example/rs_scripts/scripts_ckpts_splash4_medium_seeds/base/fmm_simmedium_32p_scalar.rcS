@@ -1,0 +1,8 @@
+mkdir /mnt/bench/
+mount /dev/hdb1 /mnt/bench/
+cd /mnt/bench/splash4/scalar/
+/sbin/m5 resetstats
+export LD_PRELOAD=/m5/lib_x86/libhooks_chkpoint.so
+
+./FMM <inputs/fmm.simmedium.32
+/sbin/m5 exit
