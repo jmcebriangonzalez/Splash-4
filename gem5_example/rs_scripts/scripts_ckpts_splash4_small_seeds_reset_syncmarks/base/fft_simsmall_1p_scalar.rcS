@@ -1,0 +1,8 @@
+mkdir /mnt/bench/
+mount /dev/hdb1 /mnt/bench/
+cd /mnt/bench/splash4/scalar_reset_syncmarks/
+/sbin/m5 resetstats
+export LD_PRELOAD=/m5/lib_x86_syncmarks/libhooks_chkpoint.so
+
+./FFT -p1 -m20
+/sbin/m5 exit

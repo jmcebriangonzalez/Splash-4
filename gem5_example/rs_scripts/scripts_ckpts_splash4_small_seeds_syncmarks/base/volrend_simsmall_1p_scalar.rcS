@@ -1,0 +1,9 @@
+mkdir /mnt/bench/
+mount /dev/hdb1 /mnt/bench/
+cd /mnt/bench/splash4/scalar_syncmarks/
+/sbin/m5 resetstats
+export LD_PRELOAD=/m5/lib_x86_syncmarks/libhooks_chkpoint.so
+
+./VOLREND 1 inputs/head-scaleddown4 20
+
+/sbin/m5 exit

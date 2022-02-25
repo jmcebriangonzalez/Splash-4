@@ -1,0 +1,9 @@
+mkdir /mnt/bench/
+mount /dev/hdb1 /mnt/bench/
+cd /mnt/bench/splash4/scalar_reset_syncmarks/
+/sbin/m5 resetstats
+export LD_PRELOAD=/m5/lib_x86_syncmarks/libhooks_chkpoint.so
+
+./OCEAN-NOCONT -n1026 -p16 -e1e-07 -r20000 -t28800
+
+/sbin/m5 exit
